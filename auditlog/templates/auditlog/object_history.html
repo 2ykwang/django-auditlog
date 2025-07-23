@@ -1,0 +1,188 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls auditlog_tags %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">{{ module_name }}</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'change' object.pk|admin_urlquote %}">{{ object|truncatewords:'18' }}</a>
+  &rsaquo; {% translate 'Audit log' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <div id="auditlog-history" class="module">
+    {% if log_entries %}
+      <div class="auditlog-entries">
+        {% for entry in log_entries %}
+          <div class="auditlog-entry">
+            <div class="entry-header">
+              <div class="entry-meta">
+                <span class="entry-timestamp">{{ entry.timestamp|date:"DATETIME_FORMAT" }}</span>
+                <span class="entry-user">{{ entry.actor|default:'system' }}</span>
+                <span class="entry-action">{{ entry.get_action_display }}</span>
+              </div>
+            </div>
+            <div class="entry-content">
+              {% if entry.action == entry.Action.DELETE or entry.action == entry.Action.ACCESS %}
+                <span class="no-changes">{% trans 'No field changes' %}</span>
+              {% else %}
+                {{ entry|format_changes|safe }}
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      
+      <!-- Simple styling with auto-width -->
+      <style>
+        .auditlog-entries {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-width: 800px;
+        }
+        
+        .auditlog-entry {
+          border: 1px solid var(--hairline-color, #e1e1e1);
+          border-radius: 4px;
+        }
+        
+        .entry-header {
+          padding: 8px 12px;
+          border-bottom: 1px solid var(--hairline-color, #e1e1e1);
+        }
+        
+        .entry-meta {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        
+        .entry-timestamp {
+          font-weight: 600;
+          font-size: 0.9em;
+        }
+        
+        .entry-user {
+          font-size: 0.9em;
+        }
+        
+        .entry-action {
+          padding: 1px 6px;
+          border-radius: 3px;
+          font-size: 0.8em;
+          font-weight: 500;
+          border: 1px solid var(--hairline-color, #e1e1e1);
+        }
+        
+        .entry-content {
+          padding: 12px;
+        }
+        
+        .no-changes {
+          font-style: italic;
+          opacity: 0.7;
+          font-size: 0.9em;
+        }
+        
+        /* Simple table styling */
+        .entry-content table {
+          width: auto;
+          min-width: 100%;
+          border-collapse: collapse;
+          margin: 6px 0;
+          font-size: 0.9em;
+        }
+        
+        .entry-content table th,
+        .entry-content table td {
+          padding: 6px 8px;
+          text-align: left;
+          vertical-align: top;
+          border: 1px solid var(--hairline-color, #e1e1e1);
+          white-space: nowrap;
+        }
+        
+        .entry-content table th {
+          font-weight: 600;
+          font-size: 0.85em;
+        }
+        
+        .entry-content table td {
+          max-width: 200px;
+          word-wrap: break-word;
+          white-space: normal;
+        }
+        
+        .entry-content table + table {
+          margin-top: 8px;
+        }
+        
+        /* Minimal pagination styling */
+        .pagination {
+          margin-top: 16px;
+          text-align: center;
+        }
+        
+        .pagination a,
+        .pagination span {
+          display: inline-block;
+          padding: 4px 8px;
+          margin: 0 2px;
+          border: 1px solid var(--hairline-color, #e1e1e1);
+          text-decoration: none;
+          border-radius: 3px;
+        }
+        
+        .pagination .current {
+          font-weight: 600;
+          border-width: 2px;
+        }
+        
+        .pagination a:hover {
+          background: var(--darkened-bg, #f8f9fa);
+        }
+        
+        @media (max-width: 768px) {
+          .auditlog-entries {
+            max-width: 100%;
+          }
+          
+          .entry-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+          }
+          
+          .entry-content {
+            padding: 8px;
+          }
+        }
+      </style>
+      
+      {% if pagination_required %}
+        <div class="pagination">
+          {% for i in page_range %}
+            {% if i == log_entries.paginator.ELLIPSIS %}
+              <span>...</span>
+            {% elif i == log_entries.number %}
+              <span class="current">{{ i }}</span>
+            {% else %}
+              <a href="?{{ page_var }}={{ i }}">{{ i }}</a>
+            {% endif %}
+          {% endfor %}
+        </div>
+        <p style="text-align: center; margin-top: 8px; opacity: 0.7; font-size: 0.9em;">
+          {{ log_entries.paginator.count }} {% blocktranslate count counter=log_entries.paginator.count %}entry{% plural %}entries{% endblocktranslate %}
+        </p>
+      {% endif %}
+    {% else %}
+      <p>{% trans 'No log entries found.' %}</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
