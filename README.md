@@ -33,6 +33,29 @@ Contribute
 
 If you have great ideas for Auditlog, or if you like to improve something, feel free to fork this repository and/or create a pull request. I'm open for suggestions. If you like to discuss something with me (about Auditlog), please open an issue.
 
+Development setup
+-----------------
+
+1. 파이썬 가상환경을 생성하고 의존성을 설치합니다.
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   # 모든 개발 의존성을 설치합니다
+   pip install -e .[tests,docs]
+   # 또는 Makefile을 사용할 수 있습니다
+   make install-requirements
+   pre-commit install
+   ```
+
+2. 테스트는 `tox` 명령으로 실행합니다.
+
+   ```bash
+   tox
+   ```
+
+3. 문서를 빌드하려면 `make docs` 를 실행합니다.
+
 Releases
 --------
 

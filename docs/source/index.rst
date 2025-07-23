@@ -23,6 +23,7 @@ Contents
    usage
    upgrade
    internals
+   development
 
 
 Contribute to Auditlog
