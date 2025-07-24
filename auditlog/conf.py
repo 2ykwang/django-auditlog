@@ -62,3 +62,32 @@ settings.AUDITLOG_STORE_JSON_CHANGES = getattr(
 )
 
 settings.AUDITLOG_MASK_CALLABLE = getattr(settings, "AUDITLOG_MASK_CALLABLE", None)
+
+# Performance optimization settings
+settings.AUDITLOG_DEFAULT_DATE_RANGE_DAYS = getattr(
+    settings, "AUDITLOG_DEFAULT_DATE_RANGE_DAYS", 365
+)
+
+settings.AUDITLOG_ADMIN_LIST_PER_PAGE = getattr(
+    settings, "AUDITLOG_ADMIN_LIST_PER_PAGE", 50
+)
+
+settings.AUDITLOG_ENABLE_ARCHIVING = getattr(
+    settings, "AUDITLOG_ENABLE_ARCHIVING", False
+)
+
+settings.AUDITLOG_ARCHIVE_AFTER_DAYS = getattr(
+    settings, "AUDITLOG_ARCHIVE_AFTER_DAYS", 365
+)
+
+settings.AUDITLOG_USE_CURSOR_PAGINATION = getattr(
+    settings, "AUDITLOG_USE_CURSOR_PAGINATION", False
+)
+
+settings.AUDITLOG_ENABLE_CACHING = getattr(
+    settings, "AUDITLOG_ENABLE_CACHING", False
+)
+
+settings.AUDITLOG_CACHE_TIMEOUT = getattr(
+    settings, "AUDITLOG_CACHE_TIMEOUT", 300
+)
