@@ -183,7 +183,7 @@ class LogEntryManager(models.Manager):
             )
         else:
             # Convert all PKs to strings for object_pk comparison
-            primary_keys = [smart_str(pk) for pk in primary_keys]
+            # primary_keys = [smart_str(pk) for pk in primary_keys]
             return (
                 self.filter(content_type=content_type)
                 .filter(Q(object_pk__in=primary_keys))
