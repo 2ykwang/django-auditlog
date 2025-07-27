@@ -472,5 +472,5 @@ auditlog.register(
 auditlog.register(
     CustomMaskModel,
     mask_fields=["credit_card"],
-    mask_callable="auditlog_tests.test_app.mask.custom_mask_str",
+    mask_callable="test_app.mask.custom_mask_str",
 )

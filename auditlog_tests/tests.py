@@ -862,9 +862,7 @@ class SimpleMaskedFieldsModelTest(TestCase):
             msg="The diff function masks 'address' field.",
         )
 
-    @override_settings(
-        AUDITLOG_MASK_CALLABLE="auditlog_tests.test_app.mask.custom_mask_str"
-    )
+    @override_settings(AUDITLOG_MASK_CALLABLE="test_app.mask.custom_mask_str")
     def test_global_mask_callable(self):
         """Test that global mask_callable from settings is used when model-specific one is not provided"""
         instance = SimpleMaskedModel.objects.create(
