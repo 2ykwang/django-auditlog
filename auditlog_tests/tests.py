@@ -31,6 +31,7 @@ from test_app.models import (
     AdditionalDataIncludedModel,
     AltPrimaryKeyModel,
     AutoManyRelatedModel,
+    BigIntegerPrimaryKeyModel,
     CharfieldTextfieldModel,
     ChoicesFieldModel,
     CustomMaskModel,
@@ -386,6 +387,64 @@ class ModelPrimaryKeyTest(TransactionTestCase):
             pk = obj.key.pk
         self.assertEqual(pk, obj.pk)
         self.assertEqual(pk, key.pk)
+
+
+class PostgreSQLPrimaryKeyTypeCastingTest(TestCase):
+    def setUp(self):
+        self.obj1 = SimpleModel.objects.create(text="test text1")
+        self.obj2 = SimpleModel.objects.create(text="test text2")
+        self.obj3 = SimpleModel.objects.create(text="test text3")
+
+        # Update objects with different values to trigger audit logs
+        self.obj1.text = "updated text1"
+        self.obj1.save()
+        self.obj2.text = "updated text2"
+        self.obj2.save()
+        self.obj3.text = "updated text3"
+        self.obj3.save()
+
+    def test_get_for_objects_with_bigint_pks(self):
+        # Create objects with large integer IDs to simulate bigint primary keys
+        bigint_objs = []
+        for i in range(3):
+            large_id = 9223372036824775800 + i
+            obj = BigIntegerPrimaryKeyModel.objects.create(
+                id=large_id, text=f"BigInt object {i}"
+            )
+            bigint_objs.append(obj)
+
+        for obj in bigint_objs:
+            obj.text = f"Updated BigInt object {obj.id}"
+            obj.save()
+
+        # Test get_for_objects with bigint primary keys
+        queryset = BigIntegerPrimaryKeyModel.objects.filter(
+            id__in=[obj.id for obj in bigint_objs]
+        )
+
+        log_entries = LogEntry.objects.get_for_objects(queryset)
+
+        # CREATE (3) + UPDATE (3) = 6
+        self.assertEqual(log_entries.count(), 6)
+
+    def test_get_for_objects_mixed_pk_types(self):
+        simple_obj = SimpleModel.objects.create(text="Simple object")
+        uuid_obj = UUIDPrimaryKeyModel.objects.create(text="UUID object")
+
+        simple_obj.text = "Updated simple"
+        simple_obj.save()
+        uuid_obj.text = "Updated UUID"
+        uuid_obj.save()
+
+        simple_queryset = SimpleModel.objects.filter(id=simple_obj.id)
+        simple_entries = LogEntry.objects.get_for_objects(simple_queryset)
+
+        uuid_queryset = UUIDPrimaryKeyModel.objects.filter(id=uuid_obj.id)
+        uuid_entries = LogEntry.objects.get_for_objects(uuid_queryset)
+
+        # CREATE (1) + UPDATE (1) = 2 for each object
+        self.assertEqual(simple_entries.count(), 2)
+        self.assertEqual(uuid_entries.count(), 2)
 
 
 class ProxyModelBase(SimpleModelTest):
@@ -1343,7 +1402,7 @@ class RegisterModelSettingsTest(TestCase):
 
         self.assertTrue(self.test_auditlog.contains(SimpleExcludeModel))
         self.assertTrue(self.test_auditlog.contains(ChoicesFieldModel))
-        self.assertEqual(len(self.test_auditlog.get_models()), 33)
+        self.assertEqual(len(self.test_auditlog.get_models()), 34)
 
     def test_register_models_register_model_with_attrs(self):
         self.test_auditlog._register_models(

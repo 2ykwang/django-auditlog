@@ -432,6 +432,14 @@ class CustomMaskModel(models.Model):
     history = AuditlogHistoryField(delete_related=True)
 
 
+class BigIntegerPrimaryKeyModel(models.Model):
+    id = models.BigIntegerField(primary_key=True)
+    text = models.TextField(blank=True)
+    boolean = models.BooleanField(default=False)
+
+    history = AuditlogHistoryField(delete_related=True, pk_indexable=False)
+
+
 auditlog.register(AltPrimaryKeyModel)
 auditlog.register(UUIDPrimaryKeyModel)
 auditlog.register(ModelPrimaryKeyModel)
@@ -474,3 +482,4 @@ auditlog.register(
     mask_fields=["credit_card"],
     mask_callable="auditlog_tests.test_app.mask.custom_mask_str",
 )
+auditlog.register(BigIntegerPrimaryKeyModel)
