@@ -1,11 +1,18 @@
 import uuid
+import os
 
-from django.contrib.postgres.fields import ArrayField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
 from auditlog.models import AuditlogHistoryField
 from auditlog.registry import AuditlogModelRegistry, auditlog
+
+# Get test type from environment variable
+TEST_TYPE = os.getenv("AUDITLOG_TEST_TYPE", "sqlite")
+
+# Only import PostgreSQL-specific fields when testing with PostgreSQL
+if TEST_TYPE == "postgres":
+    from django.contrib.postgres.fields import ArrayField
 
 m2m_only_auditlog = AuditlogModelRegistry(create=False, update=False, delete=False)
 
@@ -306,31 +313,34 @@ class CharfieldTextfieldModel(models.Model):
     """
 
     longchar = models.CharField(max_length=255)
+
     longtextfield = models.TextField()
 
     history = AuditlogHistoryField(delete_related=True)
 
 
-class PostgresArrayFieldModel(models.Model):
-    """
-    Test auditlog with Postgres's ArrayField
-    """
+# PostgreSQL-specific models (only defined when using PostgreSQL)
+if TEST_TYPE == "postgres":
+    class PostgresArrayFieldModel(models.Model):
+        """
+        Test auditlog with Postgres's ArrayField
+        """
 
-    RED = "r"
-    YELLOW = "y"
-    GREEN = "g"
+        RED = "r"
+        YELLOW = "y"
+        GREEN = "g"
 
-    STATUS_CHOICES = (
-        (RED, "Red"),
-        (YELLOW, "Yellow"),
-        (GREEN, "Green"),
-    )
+        STATUS_CHOICES = (
+            (RED, "Red"),
+            (YELLOW, "Yellow"),
+            (GREEN, "Green"),
+        )
 
-    arrayfield = ArrayField(
-        models.CharField(max_length=1, choices=STATUS_CHOICES), size=3
-    )
+        arrayfield = ArrayField(
+            models.CharField(max_length=1, choices=STATUS_CHOICES), size=3
+        )
 
-    history = AuditlogHistoryField(delete_related=True)
+        history = AuditlogHistoryField(delete_related=True)
 
 
 class NoDeleteHistoryModel(models.Model):
@@ -448,7 +458,9 @@ auditlog.register(AdditionalDataIncludedModel)
 auditlog.register(DateTimeFieldModel)
 auditlog.register(ChoicesFieldModel)
 auditlog.register(CharfieldTextfieldModel)
-auditlog.register(PostgresArrayFieldModel)
+# Only register PostgreSQL-specific models when using PostgreSQL
+if TEST_TYPE == "postgres":
+    auditlog.register(PostgresArrayFieldModel)
 auditlog.register(NoDeleteHistoryModel)
 auditlog.register(JSONModel)
 auditlog.register(NullableJSONModel)

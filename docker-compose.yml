@@ -1,0 +1,41 @@
+services:
+  postgres:
+    container_name: auditlog_postgres
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auditlog_test
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auditlog_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql:
+    container_name: auditlog_mysql
+    image: mysql:8.0
+    platform: linux/x86_64
+    restart: "no"
+    environment:
+      MYSQL_DATABASE: auditlog_test
+      MYSQL_USER: mysqluser
+      MYSQL_PASSWORD: mysqlpass
+      MYSQL_ROOT_PASSWORD: mysqlpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "mysqluser", "--password=mysqlpass"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  mysql_data:

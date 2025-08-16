@@ -42,7 +42,6 @@ from test_app.models import (
     ModelPrimaryKeyModel,
     NoDeleteHistoryModel,
     NullableJSONModel,
-    PostgresArrayFieldModel,
     ProxyModel,
     RelatedModel,
     ReusableThroughRelatedModel,
@@ -1343,7 +1342,7 @@ class RegisterModelSettingsTest(TestCase):
 
         self.assertTrue(self.test_auditlog.contains(SimpleExcludeModel))
         self.assertTrue(self.test_auditlog.contains(ChoicesFieldModel))
-        self.assertEqual(len(self.test_auditlog.get_models()), 33)
+        self.assertEqual(len(self.test_auditlog.get_models()), 32)
 
     def test_register_models_register_model_with_attrs(self):
         self.test_auditlog._register_models(
@@ -1717,45 +1716,7 @@ class CharFieldTextFieldModelTest(TestCase):
             )
 
 
-class PostgresArrayFieldModelTest(TestCase):
-    databases = "__all__"
 
-    def setUp(self):
-        self.obj = PostgresArrayFieldModel.objects.create(
-            arrayfield=[PostgresArrayFieldModel.RED, PostgresArrayFieldModel.GREEN],
-        )
-
-    @property
-    def latest_array_change(self):
-        return self.obj.history.latest().changes_display_dict["arrayfield"][1]
-
-    def test_changes_display_dict_arrayfield(self):
-        self.assertEqual(
-            self.latest_array_change,
-            "Red, Green",
-            msg="The human readable text for the two choices, 'Red, Green' is displayed.",
-        )
-        self.obj.arrayfield = [PostgresArrayFieldModel.GREEN]
-        self.obj.save()
-        self.assertEqual(
-            self.latest_array_change,
-            "Green",
-            msg="The human readable text 'Green' is displayed.",
-        )
-        self.obj.arrayfield = []
-        self.obj.save()
-        self.assertEqual(
-            self.latest_array_change,
-            "",
-            msg="The human readable text '' is displayed.",
-        )
-        self.obj.arrayfield = [PostgresArrayFieldModel.GREEN]
-        self.obj.save()
-        self.assertEqual(
-            self.latest_array_change,
-            "Green",
-            msg="The human readable text 'Green' is displayed.",
-        )
 
 
 class AdminPanelTest(TestCase):
