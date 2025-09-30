@@ -54,34 +54,60 @@ def get_fields_in_model(instance):
 
 def get_field_value(obj, field, use_json_for_changes=False):
     """
-    Gets the value of a given model instance field.
+    Gets the value of a given model instance field and normalizes it for comparison.
 
     :param obj: The model instance.
     :type obj: Model
     :param field: The field you want to find the value of.
     :type field: Any
-    :return: The value of the field as a string.
-    :rtype: str
+    :param use_json_for_changes: Whether to keep values in JSON-compatible format.
+    :type use_json_for_changes: bool
+    :return: The field value, normalized for comparison.
+    :rtype: Any
+    """
+    # JSONField needs immediate processing to handle expressions like Value(None)
+    # But only if obj is not None
+    if obj is not None and isinstance(field, JSONField):
+        raw_value = _get_raw_field_value(obj, field)
+        # Process immediately to preserve Django expressions before they're evaluated
+        if not use_json_for_changes:
+            try:
+                return json.dumps(raw_value, sort_keys=True, cls=field.encoder)
+            except TypeError:
+                return raw_value
+        return raw_value
+
+    raw_value = _get_raw_field_value(obj, field)
+    return _normalize_value(raw_value, field, use_json_for_changes)
+
+
+def _get_raw_field_value(obj, field):
+    """
+    Extracts the raw value from a field without any normalization.
+
+    :param obj: The model instance (can be None).
+    :type obj: Model or None
+    :param field: The field to extract the value from.
+    :return: The raw field value.
     """
 
     def get_default_value():
-        """
-        Attempts to get the default value for a field from the model's field definition.
-
-        :return: The default value of the field or None
-        """
+        """Get the default value for a field from the model's field definition."""
+        if obj is None:
+            return None
         try:
             model_field = obj._meta.get_field(field.name)
             default = model_field.default
             if default is NOT_PROVIDED:
                 return None
-
             if callable(default):
                 return default()
-
             return default
         except AttributeError:
             return None
+
+    if obj is None:
+        return get_default_value()
 
     try:
         if isinstance(field, DateTimeField):
@@ -98,25 +124,59 @@ def get_field_value(obj, field, use_json_for_changes=False):
                 and not django_timezone.is_naive(value)
             ):
                 value = django_timezone.make_naive(value, timezone=timezone.utc)
+            return value
         elif isinstance(field, JSONField):
-            value = field.to_python(getattr(obj, field.name))
-            if not use_json_for_changes:
-                try:
-                    value = json.dumps(value, sort_keys=True, cls=field.encoder)
-                except TypeError:
-                    pass
+            return field.to_python(getattr(obj, field.name))
         elif (field.one_to_one or field.many_to_one) and hasattr(field, "rel_class"):
-            value = smart_str(getattr(obj, field.get_attname()), strings_only=True)
+            # For ForeignKey fields, get the attribute name (e.g., "related_id")
+            return getattr(obj, field.get_attname())
         else:
-            value = getattr(obj, field.name)
-            if not use_json_for_changes:
-                value = smart_str(value)
-                if type(value).__name__ == "__proxy__":
-                    value = str(value)
+            return getattr(obj, field.name)
     except (ObjectDoesNotExist, AttributeError):
         return get_default_value()
 
-    return value
+
+def _normalize_value(value, field, use_json_for_changes):
+    """
+    Normalizes a field value for comparison in auditlog.
+
+    :param value: The raw field value.
+    :param field: The field instance.
+    :param use_json_for_changes: Whether to keep values in JSON-compatible format.
+    :type use_json_for_changes: bool
+    :return: The normalized value.
+    """
+    # JSON mode: keep primitives as-is, convert complex types to strings
+    if use_json_for_changes:
+        # None values are kept as None for accurate comparison
+        if value is None:
+            return None
+        if not is_primitive(value):
+            return smart_str(value)
+        return value
+
+    # Non-JSON mode: convert everything to strings for storage
+    # (JSONField is handled separately in get_field_value)
+
+    # None values for non-JSON fields are kept as None for accurate comparison
+    if value is None:
+        return None
+
+    if (field.one_to_one or field.many_to_one) and hasattr(field, "rel_class"):
+        return smart_str(value, strings_only=True)
+
+    # Regular fields: convert to string
+    try:
+        value_str = smart_str(value)
+        if type(value_str).__name__ == "__proxy__":
+            value_str = str(value_str)
+        return value_str
+    except (ObjectDoesNotExist, AttributeError):
+        # If __str__() raises an error (e.g., accessing deleted related objects),
+        # return a placeholder (lazy import to avoid circular dependency)
+        from auditlog.models import DEFAULT_OBJECT_REPR
+
+        return DEFAULT_OBJECT_REPR
 
 
 def is_primitive(obj) -> bool:
@@ -253,23 +313,16 @@ def model_instance_diff(
         if old_value != new_value:
             if model_fields and field.name in model_fields["mask_fields"]:
                 mask_func = get_mask_function(model_fields.get("mask_callable"))
-
                 diff[field.name] = (
                     mask_func(smart_str(old_value)),
                     mask_func(smart_str(new_value)),
                 )
             else:
+                # Values are already normalized by get_field_value
+                # But for non-JSON mode, convert None to "None" for storage
                 if not use_json_for_changes:
                     diff[field.name] = (smart_str(old_value), smart_str(new_value))
                 else:
-                    # TODO: should we handle the case where the value is a django Model specifically?
-                    #       for example, could create a list of ids for ManyToMany fields
-
-                    # this maintains the behavior of the original code
-                    if not is_primitive(old_value):
-                        old_value = smart_str(old_value)
-                    if not is_primitive(new_value):
-                        new_value = smart_str(new_value)
                     diff[field.name] = (old_value, new_value)
 
     if len(diff) == 0:

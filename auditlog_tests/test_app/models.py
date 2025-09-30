@@ -442,6 +442,14 @@ class CustomMaskModel(models.Model):
     history = AuditlogHistoryField(delete_related=True)
 
 
+class Issue750TestModel(models.Model):
+    text = models.CharField(default="abc")
+    time = models.TimeField(null=True, blank=True)
+
+    history = AuditlogHistoryField(delete_related=True)
+
+
+auditlog.register(Issue750TestModel)
 auditlog.register(AltPrimaryKeyModel)
 auditlog.register(UUIDPrimaryKeyModel)
 auditlog.register(ModelPrimaryKeyModel)

@@ -36,6 +36,7 @@ from test_app.models import (
     ChoicesFieldModel,
     CustomMaskModel,
     DateTimeFieldModel,
+    Issue750TestModel,
     JSONModel,
     ManyRelatedModel,
     ManyRelatedOtherModel,
@@ -1358,7 +1359,7 @@ class RegisterModelSettingsTest(TestCase):
 
         self.assertTrue(self.test_auditlog.contains(SimpleExcludeModel))
         self.assertTrue(self.test_auditlog.contains(ChoicesFieldModel))
-        self.assertEqual(len(self.test_auditlog.get_models()), 33)
+        self.assertEqual(len(self.test_auditlog.get_models()), 34)
 
     def test_register_models_register_model_with_attrs(self):
         self.test_auditlog._register_models(
@@ -2988,3 +2989,12 @@ class CustomMaskModelTest(TestCase):
             "****7654",
             msg="The custom masking function should be used in serialized data",
         )
+
+
+class Issue750Test(TestCase):
+    def test_issue_750_without_json(self):
+        dtm = Issue750TestModel(text="abc", time=None)
+        dtm.save()
+        log = dtm.history.latest()
+        self.assertEqual(log.changes["text"], ["None", "abc"])
+        self.assertNotIn("time", log.changes)
