@@ -17,7 +17,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.admin",
     "django.contrib.staticfiles",
-    "django.contrib.postgres",
     "auditlog",
     "test_app",
 ]

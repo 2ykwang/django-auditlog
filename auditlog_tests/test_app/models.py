@@ -493,3 +493,14 @@ auditlog.register(
     mask_callable="auditlog_tests.test_app.mask.custom_mask_str",
 )
 auditlog.register(NullableFieldModel)
+
+
+class TestModel(models.Model):
+    """Test model that reproduces issue #770"""
+    text = models.CharField(default="abc")
+    datetime = models.DateTimeField(null=True, blank=True)
+    
+    history = AuditlogHistoryField(delete_related=True)
+
+
+auditlog.register(TestModel)

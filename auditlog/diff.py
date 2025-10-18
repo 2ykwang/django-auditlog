@@ -250,7 +250,15 @@ def model_instance_diff(
         old_value = get_field_value(old, field, use_json_for_changes)
         new_value = get_field_value(new, field, use_json_for_changes)
 
-        if old_value != new_value:
+        # Normalize before comparison to avoid None vs "None" mismatches
+        if not use_json_for_changes:
+            old_compare = smart_str(old_value)
+            new_compare = smart_str(new_value)
+        else:
+            old_compare = old_value
+            new_compare = new_value
+
+        if old_compare != new_compare:
             if model_fields and field.name in model_fields["mask_fields"]:
                 mask_func = get_mask_function(model_fields.get("mask_callable"))
 
